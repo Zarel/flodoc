@@ -1,12 +1,12 @@
 var should = require('should'); // https://github.com/shouldjs/should.js#assertions
 var fs = require('fs');
-var flotate = require('../../src/flotate');
+var flodoc = require('../../src/flodoc');
 
 function getFixture(name) {
     return fs.readFileSync(__dirname + '/../fixtures/' + name, 'utf8');
 }
 
-describe('flotate', function() {
+describe('flodoc', function() {
 
     describe('translateIncludePath()', function() {
 
@@ -14,7 +14,7 @@ describe('flotate', function() {
             var sourceDir = '/Users/jara/Projects/foo/bar/src';
             var tempDir = '/var/folders/k0/vy40jfp93d538th2y4hkzt7c0000gp/T/flotate1141030-33313-s4izbj/flotate';
             var expectedPath = 'flow-interfaces/lodash.d.ts';
-            var actualPath = flotate.translateIncludePath('flow-interfaces/lodash.d.ts', sourceDir, tempDir);
+            var actualPath = flodoc.translateIncludePath('flow-interfaces/lodash.d.ts', sourceDir, tempDir);
             actualPath.should.equal(expectedPath);
         });
 
@@ -22,7 +22,7 @@ describe('flotate', function() {
             var sourceDir = '/Users/jara/Projects/foo/bar/src';
             var tempDir = '/var/folders/k0/vy40jfp93d538th2y4hkzt7c0000gp/T/flotate1141030-33313-s4izbj/flotate';
             var expectedPath = '../../../../../../../../Users/jara/Projects/foo/bar/contrib/flow-interfaces/lodash.d.ts';
-            var actualPath = flotate.translateIncludePath('../contrib/flow-interfaces/lodash.d.ts', sourceDir, tempDir);
+            var actualPath = flodoc.translateIncludePath('../contrib/flow-interfaces/lodash.d.ts', sourceDir, tempDir);
             actualPath.should.equal(expectedPath);
         });
 
@@ -34,7 +34,7 @@ describe('flotate', function() {
             it(fixture, function() {
                 var input = getFixture(fixture + ".js");
                 var expectedOutput = getFixture(fixture + '.ts');
-                var actualOutput = flotate.jsToFlow(input);
+                var actualOutput = flodoc.jsToFlow(input);
                 actualOutput.should.equal(expectedOutput);
             });
         }
@@ -52,6 +52,13 @@ describe('flotate', function() {
         itFixture('fancy-annotation');
         itFixture('include');
         itFixture('include-ws');
+
+        itFixture('jsdoc-function-argument-types-only');
+        itFixture('jsdoc-function-argument-and-return-types');
+        itFixture('jsdoc-classes');
+        itFixture('jsdoc-include');
+        itFixture('jsdoc-return-module-object');
+        itFixture('jsdoc-functions');
 
     });
 
@@ -74,7 +81,7 @@ describe('flotate', function() {
 
         it('doesn\'t try to transform directories', function(done) {
             (function() {
-                flotate.flowCheck(__dirname + '/../fixtures/flowcheck/', 'true');
+                flodoc.flowCheck(__dirname + '/../fixtures/flowcheck/', 'true');
             }).should.not.throw();
             // wait until we see the process exit successfully:
             var int = setInterval(function() {

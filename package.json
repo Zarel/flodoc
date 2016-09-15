@@ -1,8 +1,8 @@
 {
-  "name": "flotate",
-  "version": "0.1.0",
+  "name": "flodoc",
+  "version": "0.2.0",
   "description": "",
-  "main": "src/flotate.js",
+  "main": "src/flodoc.js",
   "bin": "src/cli.js",
   "directories": {
     "test": "test"
@@ -20,6 +20,7 @@
   "scripts": {
     "test": "mocha test/spec/*"
   },
-  "author": "Jarno Rantanen <jarno@jrw.fi> (http://jrw.fi/)",
+  "author": "Guangcong Luo <guangcongluo@gmail.com> (http://guangcongluo.com)",
+  "contributors": ["Jarno Rantanen <jarno@jrw.fi> (http://jrw.fi/)"],
   "license": "MIT"
 }

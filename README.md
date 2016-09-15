@@ -1,34 +1,11 @@
-# flotate
+# flodoc
 
-> A portmanteau of **flo**w and anno**tate**, allows using the [Flow](http://flowtype.org/) type checker with standard JavaScript syntax, through inline annotation comments.
+> A portmanteau of **flo**w and js**doc** based on flotate, allows using the [Flow](http://flowtype.org/) type checker with JSDoc syntax.
 
-[![Build Status](https://travis-ci.org/jareware/flotate.svg?branch=master)](https://travis-ci.org/jareware/flotate)
-
-.
-
-.
-
-.
-
-.
-
-.
-
-**IMPORTANT NOTE:** As of Flow 0.4.0, [the `flotate` syntax has been merged upstream into Flow itself](http://flowtype.org/blog/2015/02/20/Flow-Comments.html), rendering this preprocessor unnecessary. Thanks to everyone who showed interest and support!
-
-.
-
-.
-
-.
-
-.
-
-.
 
 ## Introduction
 
-[Flow](http://flowtype.org/) implements many useful type checks, but also requires you to opt into a custom JavaScript syntax. This in turn makes it hard to use many other useful tools (such as linters, preprocessors, etc) which assume standards compliant JavaScript. So instead of writing:
+[Flow](http://flowtype.org/) implements many useful type checks, but also requires you to opt into a custom JavaScript syntax. Flow comments exists, but it's not particularly readable, and JSDoc already exists and is perfectly readable and supported by Visual Studio Code. So instead of writing:
 
 ```typescript
 /* @flow */
@@ -38,44 +15,50 @@ function foo(x: string, y: number): boolean {
 foo('Hello', 42);
 ```
 
-...you can add the same type annotations with comments, either inline, in the exact positions Flow would have them:
+...you can just write JSDoc-compatible code:
 
 ```javascript
 /* @flow */
-function foo(x /*: string */, y /*: number */) /*: boolean */ {
-    return x.length * y === 5;
-}
-foo('Hello', 42);
-```
-
-...or immediately preceding an annotated function, to keep annotations and code separate:
-
-```javascript
-/* @flow */
-/*: (x: string, y: number): boolean */
+/**
+ * @param {string} x
+ * @param {number} y
+ * @return {boolean}
+ */
 function foo(x, y) {
     return x.length * y === 5;
 }
 foo('Hello', 42);
 ```
 
-It's win-some-lose-some: you lose by having to type a bit more, but win by keeping your code interoperable. Whether that's a good ROI for you will vary. That said, you don't have to bring in Flow in one go: you can add annotations to a few modules here and there, and see how it works out. With `flotate`, you can do that evaluation without big commitments (say, to a non-standard JavaScript syntax).
+It's win-some-lose-some: you lose by having to type a bit more, but win by keeping your code excellently documented/readable. You can always annotate a bit at a time and see how it works out, and see how it works out. With `flodoc`, you can do that evaluation without big commitments (say, to a non-standard JavaScript syntax).
 
-The CLI tool aims to be a drop-in-compatible subset of the `flow` commands, e.g. `flow check` becomes `flotate check`, but otherwise works the same. Only the `check` command is currently supported, but starting a background server should be added in an upcoming release.
-
-There's [a related issue](https://github.com/facebook/flow/issues/3) reported to Flow which was both an inspiration and a good problem statement.
+The CLI tool aims to be a drop-in-compatible subset of exactly one of the `flow` commands: `flow check` becomes `flodoc check`.
 
 ## Installation
 
-First get [Flow](http://flowtype.org/docs/getting-started.html), then install through `npm` as per usual:
+First get [Flow](http://flowtype.org/docs/getting-started.html), then install through `npm`:
 
 ```
-$ npm install -g flotate
+$ npm install -g http://github.com/Zarel/flodoc
 ```
 
 ## Annotations
 
-`flotate` defines 5 annotation types:
+`flodoc` will convert the following JSDoc patterns into the corresponding Flow code:
+
+ * `@param {TYPE} NAME` for function parameters
+ * `@return {TYPE}`, `@returns {TYPE}` for function return values
+ * `@type {TYPE}`, `@const {TYPE}`, `@constant {TYPE}` for variable types
+ * In a constructor: `@type {TYPE}`, `@private {TYPE}`, `@protected {TYPE}`, `@public {TYPE}` above `this.NAME` for members on a class
+ * `@typedef {TYPE} NAME` for defining types
+
+`TYPE` should be a Flow-compatible type and `NAME` should be an identifier.
+
+Explicitly unsupported JSDoc patterns include: ES5-style classes (i.e. `@class`, `@member`), non-Flow-compatible ways of defining functions/objects (i.e. `@callback` or `@property`).
+
+If you need anything else, just use Flow Comments.
+
+`flodoc` also supports Flow Comments notation:
 
  * `/*: whatever */` which translates to `: whatever`. This is by far the most common annotation you'll need, as it's the syntax Flow uses for [function arguments, return values](http://flowtype.org/docs/type-annotations.html#_) and [variables](http://flowtype.org/docs/variables.html#_). When `/*:` appears *immediately preceding* a function, however, it is treated as the complete signature of that function. See [here](test/fixtures/fancy-annotation.js) for an example.
  * `/*:: something */` which translates to `something`. This makes it possible to include anything you want Flow to see, but isn't standard JavaScript, such as [field types](http://flowtype.org/docs/classes.html#_), [reusable object types](http://flowtype.org/docs/objects.html#_) and [aliases](http://flowtype.org/docs/type-aliases.html#_).
@@ -89,23 +72,22 @@ The following demonstrates how to use each annotation type, combined with an [ES
 ```javascript
 /* @flow */
 
-/*::
-  type Message = {
-    timestamp: number;
-    payload: string;
-  };
-  type Messages = Array<Message>;
-*/
+/**
+ * @typedef {{timestamp: number, payload: string}} Message
+ * @typedef {Array<Message>} Messages;
+ */
 
 class MessageStore {
 
-  /*:: _msgs: Messages; */
-
   constructor() {
+    /** @private {Messages} */
     this._msgs = [];
   }
 
-  addMessages(newMessages /*: Message | Messages */) {
+  /**
+   * @param {Message | Messages} newMessages
+   */
+  addMessages(newMessages) {
     this._msgs = this._msgs.concat(newMessages);
   }
 
@@ -128,15 +110,15 @@ ms.addMessages({
 Some things worth pointing out:
 
  * We mark the module as eligible for type-checking with `/* @flow */`.
- * We define an object type `Message` and a type alias `Messages` using the `/*::` annotation. The contents can be spread over several lines.
- * We define a field type `_msgs` using the `/*::` annotation. The contents can also be single-line, if that looks better.
- * We define a (union) argument type for `newMessages` using the `/*:` annotation, so the method accepts single objects as well as arrays of the same objects.
- * We dynamically patch `addMessages()` with some debugging info. This would cause Flow to complain about the `addMessages.apply()` call, as it loses track of argument types. We decide that "we know what we're doing", and hide that part of the code from Flow using the `/*flow-ignore-begin*/` and `/*flow-ignore-end*/` annotations.
+ * We define an object type `Message` and a type alias `Messages` using `@typedef`.
+ * We define a field type `_msgs` using `@private`. The contents can also be single-line, if that looks better.
+ * We define a (union) argument type for `newMessages` using `@param`, so the method accepts single objects as well as arrays of the same objects.
+ * We dynamically patch `addMessages()` with some debugging info. Flow Comments (flotate) syntax is supported.
 
 Attempting to type-check this will give us errors:
 
 ```
-$ flotate check .
+$ flodoc check .
 
 /path/to/demo.js:4:17,7:2: property timestamp
 Property not found in
@@ -165,7 +147,7 @@ ms.addMessages({
 Now our module type-checks:
 
 ```
-$ flotate check .
+$ flodoc check .
 
 Found 0 errors
 ```
@@ -214,39 +196,41 @@ ms.addMessages({
 
 ## Dockerfile
 
-You can also run `flotate` without installing anything locally, given you already have [Docker](https://www.docker.com/).
+You can also run `flodoc` without installing anything locally, given you already have [Docker](https://www.docker.com/).
+
+Probably? That's how flotate works. I've never used Docker so I don't actually know if this fork changed anything that would affect compatibility.
 
 ### Building
 
 ```
-$ docker build -t flotate
+$ docker build -t flodoc
 ```
 
 ### Running
 
 ```
-$ docker run --rm -it -v $(pwd):/src:ro flotate check .
+$ docker run --rm -it -v $(pwd):/src:ro flodoc check .
 ```
 
 ## How it works
 
-This tool is fundamentally just a simple pre-processor for Flow, and mostly a combination of excellent existing tools. When type-checking code, the following happens:
+This tool is fundamentally just a simple pre-processor for Flow, a fork of `flotate`. When type-checking code, the following happens:
 
  1. Check for the presence of the `.flowconfig` file. It marks Flow "workspaces".
  1. Create a temporary path, that's automatically cleaned up on exit (with [temp](https://github.com/bruce/node-temp)).
  1. Recursively copy all files in the workspace to the temporary path (with [wrench](https://github.com/ryanmcgrath/wrench-js)).
  1. Update paths in the temporary copy of the `.flowconfig` file, so they point back to the original workspace. This is only needed for paths which reach outside the workspace (e.g. `../../node_modules`), and reduces the need to copy things around.
- 1. Look for all files in the temporary workspace marked with `@flow`, and transform the comment annotations to their Flow counterparts (with [esprima](https://github.com/facebook/esprima) and [falafel](https://github.com/substack/node-falafel)).
+ 1. Look for all files in the temporary workspace marked with `@flow`, and transform the comment annotations to their Flow counterparts (with [esprima](https://github.com/facebook/esprima) and [falafel](https://github.com/substack/node-falafel) and a lot of regexes).
  1. Invoke the relevant `flow` check on the temporary workspace.
  1. Output whatever `flow` outputs, and exit with whatever it exits with.
  1. Clean up.
 
 ## Acknowledgements
 
-This project is a grateful recipient of the [Futurice Open Source sponsorship program](http://futurice.com/blog/sponsoring-free-time-open-source-activities).
+I've already mentioned so many times that this is a fork of `flotate`, but just to drive it in, this is a fork of https://github.com/jareware/flotate
 
-You guys rule. :bow:
+Even the README is just flotate's readme, edited.
 
 ## License
 
-This projected is licensed under the terms of the MIT license.
+This project is licensed under the terms of the MIT license.
